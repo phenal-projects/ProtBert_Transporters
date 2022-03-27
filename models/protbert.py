@@ -62,11 +62,11 @@ class ProtBertModule(LightningModule):
 
             self.log(
                 f"{stage}_roc_auc",
-                roc_auc_score(labels, logits),
+                torch.tensor(roc_auc_score(labels, logits)),
             )
             self.log(
                 f"{stage}_ap",
-                average_precision_score(labels, logits),
+                torch.tensor(average_precision_score(labels, logits)),
             )
 
     def training_epoch_end(self, outputs) -> None:
