@@ -1,0 +1,21 @@
+random_seed: 42
+data:
+  db_path: "/home/ilyabushmakin/Documents/Projects/DataStorage/transporters_clf/sequences.lmdb"
+  batch_size: 3
+model:
+  name: "Rostlab/prot_bert_bfd"
+  frozen_layers: 27
+training:
+  max_epochs: 30
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  adam_epsilon: 0.00000001
+  warmup_steps: 5
+  gpus: 1
+  precision: 16
+  amp_backend: "apex"
+  amp_level: "O1"
+  fast_dev: False
+tracking:
+  experiment_name: "ProteinClassification"
+  checkpoints_folder: "./models"
