@@ -39,7 +39,7 @@ class ProtBertModule(LightningModule):
         loss = F.binary_cross_entropy_with_logits(logits.view(-1), batch["labels"])
 
         self.log("train_loss", loss)
-        return {"loss": loss, "logits": logits, "labels": batch["labels"]}
+        return {"loss": loss, "logits": logits.detach(), "labels": batch["labels"]}
 
     def validation_step(self, batch, batch_idx):
         logits = self(**batch)

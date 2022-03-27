@@ -14,7 +14,7 @@ def main(cfg: DictConfig) -> None:
 
     # model
     model = ProtBertModule(
-        protbert_name="Rostlab/prot_bert_bfd",
+        protbert_name=cfg["model"]["name"],
         max_epochs=cfg["training"]["max_epochs"],
         learning_rate=cfg["training"]["learning_rate"],
         weight_decay=cfg["training"]["weight_decay"],
