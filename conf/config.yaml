@@ -6,8 +6,8 @@ model:
   name: "Rostlab/prot_bert_bfd"
   frozen_layers: 27
 training:
-  max_epochs: 100
-  learning_rate: 0.001
+  max_epochs: 50
+  learning_rate: 0.0001
   weight_decay: 0.0001
   adam_epsilon: 0.00000001
   warmup_steps: 5
