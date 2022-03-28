@@ -58,34 +58,38 @@ class ProtBertModule(LightningModule):
         return {"logits": logits, "labels": batch["labels"]}
 
     def log_epoch_metrics(self, logits: np.ndarray, labels: np.ndarray, stage: str):
+        print(logits.shape)
+        print(logits.dtype)
+        print(labels.shape)
+        print(labels.dtype)
         if len(np.unique(labels)) != 1:
 
             self.log(
                 f"{stage}_roc_auc",
-                torch.FloatTensor(roc_auc_score(labels, logits)),
+                torch.tensor(roc_auc_score(labels, logits), dtype=torch.float32),
             )
             self.log(
                 f"{stage}_ap",
-                torch.FloatTensor(average_precision_score(labels, logits)),
+                torch.tensor(average_precision_score(labels, logits), dtype=torch.float32),
             )
 
     def training_epoch_end(self, outputs) -> None:
         outputs = self.all_gather(outputs)
-        logits = torch.cat([output["logits"] for output in outputs]).cpu().numpy()
+        logits = torch.cat([output["logits"] for output in outputs]).cpu().numpy().reshape(-1)
         labels = torch.cat([output["labels"] for output in outputs]).cpu().numpy()
 
         self.log_epoch_metrics(logits, labels, "train")
 
     def validation_epoch_end(self, outputs) -> None:
         outputs = self.all_gather(outputs)
-        logits = torch.cat([output["logits"] for output in outputs]).cpu().numpy()
+        logits = torch.cat([output["logits"] for output in outputs]).cpu().numpy().reshape(-1)
         labels = torch.cat([output["labels"] for output in outputs]).cpu().numpy()
 
         self.log_epoch_metrics(logits, labels, "val")
 
     def test_epoch_end(self, outputs) -> None:
         outputs = self.all_gather(outputs)
-        logits = torch.cat([output["logits"] for output in outputs]).cpu().numpy()
+        logits = torch.cat([output["logits"] for output in outputs]).cpu().numpy().reshape(-1)
         labels = torch.cat([output["labels"] for output in outputs]).cpu().numpy()
 
         self.log_epoch_metrics(logits, labels, "test")

@@ -1,3 +1,5 @@
+import os.path
+
 import hydra
 import pytorch_lightning as pl
 from omegaconf import DictConfig
@@ -27,12 +29,18 @@ def main(cfg: DictConfig) -> None:
         db_path=cfg["data"]["db_path"],
         tokenizer=model.tokenizer,
         batch_size=cfg["data"]["batch_size"],
+        training_batches_per_epoch=cfg["training"]["training_batches_per_epoch"],
         random_seed=cfg["random_seed"],
     )
 
     logger = WandbLogger(
         project=cfg["tracking"]["experiment_name"],
         log_model=True,
+    )
+    logger.log_hyperparams(
+        {
+            "folder": os.path.abspath(cfg["tracking"]["checkpoints_folder"]),
+        }
     )
 
     if cfg["training"]["amp_backend"] == "apex":
@@ -73,8 +81,8 @@ def main(cfg: DictConfig) -> None:
                 ),
                 LearningRateMonitor("epoch"),
             ],
-            limit_train_batches=5000,
-            limit_val_batches=1000,
+            limit_train_batches=cfg["training"]["training_batches_per_epoch"],
+            limit_val_batches=cfg["training"]["val_batches_per_epoch"],
             logger=logger,
             fast_dev_run=cfg["training"]["fast_dev"],
         )

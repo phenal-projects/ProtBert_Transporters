@@ -47,6 +47,7 @@ class SequencesDataModule(LightningDataModule):
         self,
         db_path: Union[str, os.PathLike],
         tokenizer: PreTrainedTokenizer,
+        training_batches_per_epoch: int = 5000,
         batch_size: int = 10,
         random_seed: int = 42,
     ):
@@ -55,6 +56,7 @@ class SequencesDataModule(LightningDataModule):
         self.db = SequenceDataset(db_path)
         self.tokenizer = tokenizer
 
+        self.training_batches_per_epoch = training_batches_per_epoch
         self.batch_size = batch_size
         self.random_seed = random_seed
 
@@ -102,7 +104,7 @@ class SequencesDataModule(LightningDataModule):
             num_workers=4,
             sampler=WeightedRandomSampler(
                 weights=self.train_sampling_weights,
-                num_samples=self.batch_size*5000,
+                num_samples=self.batch_size*self.training_batches_per_epoch,
                 replacement=False,
             ),
             batch_size=self.batch_size,
