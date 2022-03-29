@@ -1,7 +1,4 @@
 random_seed: 42
-data:
-  db_path: "/home/ilyabushmakin/Documents/Projects/DataStorage/transporters_clf/sequences.lmdb"
-  batch_size: 3
 model:
   name: "Rostlab/prot_bert_bfd"
   frozen_layers: 27
@@ -21,3 +18,20 @@ training:
 tracking:
   experiment_name: "ProteinClassification"
   checkpoints_folder: "./models"
+data:
+  db_path: "/home/ilyabushmakin/Documents/Projects/DataStorage/transporters_clf/sequences.lmdb"
+  batch_size: 3
+  val_cogs:
+    - KOG3944
+    - KOG1053
+    - COG1291
+    - KOG0255
+    - COG0765
+    - arCOG00194
+  test_cogs:
+    - KOG1893
+    - KOG1054
+    - COG3781
+    - KOG0254
+    - COG0841
+    - arCOG00130

@@ -47,6 +47,8 @@ class SequencesDataModule(LightningDataModule):
         self,
         db_path: Union[str, os.PathLike],
         tokenizer: PreTrainedTokenizer,
+        val_classes: Collection[str],
+        test_classes: Collection[str],
         training_batches_per_epoch: int = 5000,
         batch_size: int = 10,
         random_seed: int = 42,
@@ -60,6 +62,9 @@ class SequencesDataModule(LightningDataModule):
         self.batch_size = batch_size
         self.random_seed = random_seed
 
+        self.test_classes = set(test_classes)
+        self.val_classes = set(val_classes)
+
         self.datasets = None
         self.train_sampling_weights = None
 
@@ -72,9 +77,14 @@ class SequencesDataModule(LightningDataModule):
         self.db.init_db()
         keys = sorted(self.db.get_keys())
 
-        train, val, test = split_list(
-            keys, train_size=0.8, val_size=0.1, random_state=self.random_seed
-        )
+        train, val, test = [], [], []
+        for key in keys:
+            if len(self.db[key].seq_classes & self.test_classes) > 0:
+                test.append(key)
+            elif len(self.db[key].seq_classes & self.val_classes) > 0:
+                val.append(key)
+            else:
+                train.append(key)
 
         self.datasets = dict()
         if stage == "fit" or stage is None:
