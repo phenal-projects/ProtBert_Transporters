@@ -28,6 +28,8 @@ def main(cfg: DictConfig) -> None:
     data = SequencesDataModule(
         db_path=cfg["data"]["db_path"],
         tokenizer=model.tokenizer,
+        val_classes=cfg["data"]["val_cogs"],
+        test_classes=cfg["data"]["val_cogs"],
         batch_size=cfg["data"]["batch_size"],
         training_batches_per_epoch=cfg["training"]["training_batches_per_epoch"],
         random_seed=cfg["random_seed"],
@@ -60,8 +62,8 @@ def main(cfg: DictConfig) -> None:
                 ),
                 LearningRateMonitor("epoch"),
             ],
-            limit_train_batches=5000,
-            limit_val_batches=1000,
+            limit_train_batches=cfg["training"]["training_batches_per_epoch"],
+            limit_val_batches=cfg["training"]["val_batches_per_epoch"],
             logger=logger,
             fast_dev_run=cfg["training"]["fast_dev"],
         )
