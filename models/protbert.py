@@ -58,10 +58,6 @@ class ProtBertModule(LightningModule):
         return {"logits": logits, "labels": batch["labels"]}
 
     def log_epoch_metrics(self, logits: np.ndarray, labels: np.ndarray, stage: str):
-        print(logits.shape)
-        print(logits.dtype)
-        print(labels.shape)
-        print(labels.dtype)
         if len(np.unique(labels)) != 1:
 
             self.log(
