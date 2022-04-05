@@ -29,7 +29,7 @@ def main(cfg: DictConfig) -> None:
         db_path=cfg["data"]["db_path"],
         tokenizer=model.tokenizer,
         val_classes=cfg["data"]["val_cogs"],
-        test_classes=cfg["data"]["val_cogs"],
+        test_classes=cfg["data"]["test_cogs"],
         batch_size=cfg["data"]["batch_size"],
         training_batches_per_epoch=cfg["training"]["training_batches_per_epoch"],
         random_seed=cfg["random_seed"],
