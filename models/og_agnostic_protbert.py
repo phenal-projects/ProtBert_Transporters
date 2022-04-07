@@ -152,13 +152,13 @@ class AdvProtBertModule(LightningModule):
     def training_epoch_end(self, outputs) -> None:
         outputs = self.all_gather(outputs)
         logits = (
-            torch.cat([output["logits"] for output in outputs if "logits" in output])
+            torch.cat([output["logits"] for output in outputs[0]])
             .cpu()
             .numpy()
             .reshape(-1)
         )
         labels = (
-            torch.cat([output["labels"] for output in outputs if "logits" in output])
+            torch.cat([output["labels"] for output in outputs[0]])
             .cpu()
             .numpy()
         )
@@ -166,15 +166,14 @@ class AdvProtBertModule(LightningModule):
 
         og_logits = (
             torch.cat(
-                [output["og_logits"] for output in outputs if "og_logits" in output]
+                [output["og_logits"] for output in outputs[1]]
             )
             .cpu()
             .numpy()
-            .reshape(-1)
         )
         og_labels = (
             torch.cat(
-                [output["og_labels"] for output in outputs if "og_labels" in output]
+                [output["og_labels"] for output in outputs[1]]
             )
             .cpu()
             .numpy()
@@ -196,7 +195,6 @@ class AdvProtBertModule(LightningModule):
             torch.cat([output["og_logits"] for output in outputs])
             .cpu()
             .numpy()
-            .reshape(-1)
         )
         og_labels = torch.cat([output["og_labels"] for output in outputs]).cpu().numpy()
         self.log_epoch_og_metrics(og_logits, og_labels, "val")
@@ -216,7 +214,6 @@ class AdvProtBertModule(LightningModule):
             torch.cat([output["og_logits"] for output in outputs])
             .cpu()
             .numpy()
-            .reshape(-1)
         )
         og_labels = torch.cat([output["og_labels"] for output in outputs]).cpu().numpy()
         self.log_epoch_og_metrics(og_logits, og_labels, "test")
