@@ -294,7 +294,7 @@ class AdvProtBertModule(LightningModule):
             eps=self.hparams.adam_epsilon,
         )
         scheduler_og = get_linear_schedule_with_warmup(
-            optimizer_clf,
+            optimizer_og,
             num_warmup_steps=self.hparams.warmup_steps,
             num_training_steps=self.hparams.max_epochs,
         )
