@@ -2,11 +2,13 @@ import os.path
 
 import hydra
 import pytorch_lightning as pl
+from bioseq_dataset import SequenceDataset
 from omegaconf import DictConfig
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import WandbLogger
 
 from data_handling.bioseq_module import SequencesDataModule
+from models.og_agnostic_protbert import AdvProtBertModule
 from models.protbert import ProtBertModule
 
 
@@ -15,14 +17,37 @@ def main(cfg: DictConfig) -> None:
     pl.seed_everything(cfg["random_seed"])
 
     # model
-    model = ProtBertModule(
-        protbert_name=cfg["model"]["name"],
-        max_epochs=cfg["training"]["max_epochs"],
-        learning_rate=cfg["training"]["learning_rate"],
-        weight_decay=cfg["training"]["weight_decay"],
-        adam_epsilon=cfg["training"]["adam_epsilon"],
-        warmup_steps=cfg["training"]["warmup_steps"],
-    )
+    if cfg["training"]["adv_weight"] > 0:
+        # get OGs number
+        sd = SequenceDataset(
+            cfg["data"]["db_path"],
+            read_only=True,
+        )
+        sd.init_db()
+        all_cogs = set()
+        for key in sd.get_keys():
+            all_cogs.update(sd[key].seq_classes)
+        del sd
+
+        model = AdvProtBertModule(
+            protbert_name=cfg["model"]["name"],
+            max_epochs=cfg["training"]["max_epochs"],
+            learning_rate=cfg["training"]["learning_rate"],
+            weight_decay=cfg["training"]["weight_decay"],
+            adam_epsilon=cfg["training"]["adam_epsilon"],
+            warmup_steps=cfg["training"]["warmup_steps"],
+            adv_weight=cfg["training"]["adv_weight"],
+            num_cogs=len(all_cogs)
+        )
+    else:
+        model = ProtBertModule(
+            protbert_name=cfg["model"]["name"],
+            max_epochs=cfg["training"]["max_epochs"],
+            learning_rate=cfg["training"]["learning_rate"],
+            weight_decay=cfg["training"]["weight_decay"],
+            adam_epsilon=cfg["training"]["adam_epsilon"],
+            warmup_steps=cfg["training"]["warmup_steps"],
+        )
     model.freeze_first_layers(cfg["model"]["frozen_layers"])
     # data
     data = SequencesDataModule(

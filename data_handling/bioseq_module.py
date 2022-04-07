@@ -6,7 +6,6 @@ from bioseq_dataset import SequenceData, SequenceDataset
 from torch.utils.data import DataLoader, Dataset, WeightedRandomSampler
 from pytorch_lightning import LightningDataModule
 
-from data_handling.util import split_list
 from transformers import DataCollatorWithPadding, PreTrainedTokenizer
 
 
@@ -66,11 +65,17 @@ class SequencesDataModule(LightningDataModule):
         self.val_classes = set(val_classes)
 
         self.datasets = None
+        self.cog_dict = None
         self.train_sampling_weights = None
 
     def tokenize(self, x: SequenceData):
         dct = self.tokenizer(" ".join(x.seq.upper()), truncation=True, max_length=1024)
         dct["labels"] = float(x.label)
+        if self.cog_dict is not None:
+            dct["og_labels"] = [0.0] * len(self.cog_dict)
+            for k in x.seq_classes:
+                if k in dct["og_labels"]:
+                    dct["og_labels"][self.cog_dict[k]] = 1.0
         return dct
 
     def setup(self, stage: Optional[str] = None) -> None:
@@ -85,6 +90,12 @@ class SequencesDataModule(LightningDataModule):
                 val.append(key)
             else:
                 train.append(key)
+
+        # fit cogs idx
+        all_cogs = set()
+        for key in keys:
+            all_cogs.update(self.db[key].seq_classes)
+        self.cog_dict = {k: i for i, k in enumerate(sorted(all_cogs))}
 
         self.datasets = dict()
         if stage == "fit" or stage is None:
