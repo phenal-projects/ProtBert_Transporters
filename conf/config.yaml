@@ -1,13 +1,13 @@
 random_seed: 42
 model:
   name: "Rostlab/prot_bert_bfd"
-  frozen_layers: 27
+  frozen_layers: 30
 training:
-  max_epochs: 50
-  learning_rate: 0.0001
+  max_epochs: 40
+  learning_rate: 0.00005
   weight_decay: 0.0001
   adam_epsilon: 0.00000001
-  warmup_steps: 5
+  warmup_steps: 4
   gpus: 1
   precision: 16
   amp_backend: "apex"
@@ -15,23 +15,20 @@ training:
   fast_dev: False
   training_batches_per_epoch: 5000
   val_batches_per_epoch: 2000
-  adv_weight: 0.7
+  adv_weight: 0.0
 tracking:
   experiment_name: "ProteinClassificationAdv"
   checkpoints_folder: "./models"
 data:
-  db_path: "/home/ilyabushmakin/Documents/Projects/DataStorage/transporters_clf/sequences_right.lmdb"
+  db_path: "/home/ilyabushmakin/Documents/Projects/DataStorage/transporters_clf/sequences_filtered.lmdb"
   batch_size: 3
   val_cogs:
-    - arCOG04466
-    - COG3067
-    - KOG4505
-    - arCOG00751
-    - COG3302
-  test_cogs:
-    - KOG2399
-    - arCOG02009
+    - KOG3659
     - COG3630
-    - arCOG00177
-    - COG3521
-    - KOG4075
+    - arCOG00194
+    - COG4975
+  test_cogs:
+    - COG3067
+    - KOG2718
+    - COG0833
+    - KOG3145
