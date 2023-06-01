@@ -70,7 +70,7 @@ class SequencesDataModule(LightningDataModule):
 
     def tokenize(self, x: SequenceData):
         dct = self.tokenizer(" ".join(x.seq.upper()), truncation=True, max_length=1024)
-        dct["labels"] = float(x.label)
+        dct["labels"] = int(x.label)
         if self.cog_dict is not None:
             dct["og_labels"] = [0.0] * len(self.cog_dict)
             for k in x.seq_classes:
@@ -111,7 +111,11 @@ class SequencesDataModule(LightningDataModule):
             train_labels = np.array(
                 [self.db[key].label for key in self.datasets["train"].keys]
             )
-            weights = {0: train_labels.mean(), 1: 1 - train_labels.mean()}
+            classes = np.unique(train_labels)
+            weights = {
+                i: len(train_labels) / len(classes) / (train_labels == 0).sum()
+                for i in classes
+            }
             self.train_sampling_weights = [weights[label] for label in train_labels]
         if stage == "test" or stage is None:
             self.datasets["test"] = SequenceLMDBDataset(
@@ -125,7 +129,7 @@ class SequencesDataModule(LightningDataModule):
             num_workers=4,
             sampler=WeightedRandomSampler(
                 weights=self.train_sampling_weights,
-                num_samples=self.batch_size*self.training_batches_per_epoch,
+                num_samples=self.batch_size * self.training_batches_per_epoch,
                 replacement=False,
             ),
             batch_size=self.batch_size,

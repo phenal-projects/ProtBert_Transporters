@@ -1,3 +1,7 @@
 # Project exclude paths
 /outputs/
 /.idea/
+*.gz
+*.png
+*_result
+*.pyc

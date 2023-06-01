@@ -3,32 +3,33 @@ model:
   name: "Rostlab/prot_bert_bfd"
   frozen_layers: 30
 training:
-  max_epochs: 40
+  max_epochs: 50
   learning_rate: 0.00005
   weight_decay: 0.0001
   adam_epsilon: 0.00000001
   warmup_steps: 4
-  gpus: 1
-  precision: 16
-  amp_backend: "apex"
-  amp_level: "O1"
+  accelerator: "gpu"
+  precision: "16-mixed"
   fast_dev: False
   training_batches_per_epoch: 5000
-  val_batches_per_epoch: 2000
+  val_batches_per_epoch: 1000
   adv_weight: 0.0
 tracking:
-  experiment_name: "ProteinClassificationAdv"
+  experiment_name: "ProteinClassificationMOA"
   checkpoints_folder: "./models"
 data:
-  db_path: "/home/ilyabushmakin/Documents/Projects/DataStorage/transporters_clf/sequences_filtered.lmdb"
-  batch_size: 3
+  db_path: "/home/ilbumi/Documents/Projects/Data/sequences_filtered_multiclass.lmdb"
+  num_classes: 3
+  batch_size: 16
   val_cogs:
     - KOG3659
     - COG3630
     - arCOG00194
     - COG4975
+    - KOG3787
   test_cogs:
     - COG3067
     - KOG2718
     - COG0833
     - KOG3145
+    - KOG1172

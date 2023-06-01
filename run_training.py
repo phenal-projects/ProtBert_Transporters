@@ -37,7 +37,7 @@ def main(cfg: DictConfig) -> None:
             adam_epsilon=cfg["training"]["adam_epsilon"],
             warmup_steps=cfg["training"]["warmup_steps"],
             adv_weight=cfg["training"]["adv_weight"],
-            num_cogs=len(all_cogs)
+            num_cogs=len(all_cogs),
         )
     else:
         model = ProtBertModule(
@@ -45,6 +45,7 @@ def main(cfg: DictConfig) -> None:
             max_epochs=cfg["training"]["max_epochs"],
             learning_rate=cfg["training"]["learning_rate"],
             weight_decay=cfg["training"]["weight_decay"],
+            num_classes=cfg["data"]["num_classes"],
             adam_epsilon=cfg["training"]["adam_epsilon"],
             warmup_steps=cfg["training"]["warmup_steps"],
         )
@@ -70,49 +71,26 @@ def main(cfg: DictConfig) -> None:
         }
     )
 
-    if cfg["training"]["amp_backend"] == "apex":
-        trainer = pl.Trainer(
-            default_root_dir=cfg["tracking"]["checkpoints_folder"],
-            gpus=cfg["training"]["gpus"],
-            precision=cfg["training"]["precision"],
-            amp_backend=cfg["training"]["amp_backend"],
-            amp_level=cfg["training"]["amp_level"],
-            max_epochs=cfg["training"]["max_epochs"],
-            callbacks=[
-                ModelCheckpoint(
-                    save_top_k=3,
-                    save_weights_only=True,
-                    mode="max",
-                    monitor="val_roc_auc",
-                ),
-                LearningRateMonitor("epoch"),
-            ],
-            limit_train_batches=cfg["training"]["training_batches_per_epoch"],
-            limit_val_batches=cfg["training"]["val_batches_per_epoch"],
-            logger=logger,
-            fast_dev_run=cfg["training"]["fast_dev"],
-        )
-    else:
-        trainer = pl.Trainer(
-            default_root_dir=cfg["tracking"]["checkpoints_folder"],
-            gpus=cfg["training"]["gpus"],
-            precision=cfg["training"]["precision"],
-            amp_backend=cfg["training"]["amp_backend"],
-            max_epochs=cfg["training"]["max_epochs"],
-            callbacks=[
-                ModelCheckpoint(
-                    save_top_k=3,
-                    save_weights_only=True,
-                    mode="max",
-                    monitor="val_roc_auc",
-                ),
-                LearningRateMonitor("epoch"),
-            ],
-            limit_train_batches=cfg["training"]["training_batches_per_epoch"],
-            limit_val_batches=cfg["training"]["val_batches_per_epoch"],
-            logger=logger,
-            fast_dev_run=cfg["training"]["fast_dev"],
-        )
+    trainer = pl.Trainer(
+        default_root_dir=cfg["tracking"]["checkpoints_folder"],
+        accelerator=cfg["training"]["accelerator"],
+        precision=cfg["training"]["precision"],
+        max_epochs=cfg["training"]["max_epochs"],
+        callbacks=[
+            ModelCheckpoint(
+                save_top_k=3,
+                save_weights_only=True,
+                mode="max",
+                monitor="val_roc_auc",
+            ),
+            LearningRateMonitor("epoch"),
+        ],
+        limit_train_batches=cfg["training"]["training_batches_per_epoch"],
+        limit_val_batches=cfg["training"]["val_batches_per_epoch"],
+        logger=logger,
+        fast_dev_run=cfg["training"]["fast_dev"],
+    )
+
     trainer.fit(model, data)
     trainer.test(model, data)
 

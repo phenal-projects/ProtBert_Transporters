@@ -4,7 +4,7 @@ from pytorch_lightning import LightningModule
 from transformers import BertModel, BertTokenizer, get_linear_schedule_with_warmup
 from torch import optim
 from torch import nn
-from torch.nn import functional as F
+from torchmetrics.classification import MulticlassAUROC, MulticlassAveragePrecision
 from sklearn.metrics import roc_auc_score, average_precision_score
 
 
@@ -16,6 +16,7 @@ class ProtBertModule(LightningModule):
         learning_rate: float = 0.001,
         weight_decay: float = 0.0001,
         adam_epsilon: float = 1e-8,
+        num_classes: int = 2,
         warmup_steps: int = 2,
     ):
         super().__init__()
@@ -23,8 +24,22 @@ class ProtBertModule(LightningModule):
             protbert_name, do_lower_case=False
         )
         self.model = BertModel.from_pretrained(protbert_name)
-        self.clf_head = nn.Sequential(nn.Linear(self.model.config.hidden_size, 1))
+        if num_classes == 2:
+            self.clf_head = nn.Sequential(nn.Linear(self.model.config.hidden_size, 1))
+            self.loss_fn = nn.BCEWithLogitsLoss()
+        else:
+            self.clf_head = nn.Sequential(
+                nn.Linear(self.model.config.hidden_size, num_classes)
+            )
+            self.loss_fn = nn.CrossEntropyLoss()
         self.save_hyperparameters()
+
+        self.roc_auc_fn = MulticlassAUROC(num_classes=num_classes, average=None)
+        self.ap_fn = MulticlassAveragePrecision(num_classes=num_classes, average=None)
+
+        self.training_step_outputs = []
+        self.validation_step_outputs = []
+        self.test_step_outputs = []
 
     def forward(
         self, input_ids: torch.LongTensor, attention_mask: torch.Tensor, **kwargs
@@ -36,59 +51,67 @@ class ProtBertModule(LightningModule):
     def training_step(self, batch, batch_idx):
         logits = self(**batch)
 
-        loss = F.binary_cross_entropy_with_logits(logits.view(-1), batch["labels"])
+        loss = self.loss_fn(logits, batch["labels"])
 
         self.log("train_loss", loss)
+        self.training_step_outputs.append(
+            (logits.detach().cpu(), batch["labels"].cpu())
+        )
         return {"loss": loss, "logits": logits.detach(), "labels": batch["labels"]}
 
     def validation_step(self, batch, batch_idx):
         logits = self(**batch)
 
-        loss = F.binary_cross_entropy_with_logits(logits.view(-1), batch["labels"])
+        loss = self.loss_fn(logits, batch["labels"])
 
         self.log("val_loss", loss)
+        self.validation_step_outputs.append(
+            (logits.detach().cpu(), batch["labels"].cpu())
+        )
         return {"logits": logits, "labels": batch["labels"]}
 
     def test_step(self, batch, batch_idx):
         logits = self(**batch)
 
-        loss = F.binary_cross_entropy_with_logits(logits.view(-1), batch["labels"])
-
+        loss = self.loss_fn(logits, batch["labels"])
+        self.test_step_outputs.append((logits.detach().cpu(), batch["labels"].cpu()))
         self.log("test_loss", loss)
         return {"logits": logits, "labels": batch["labels"]}
 
-    def log_epoch_metrics(self, logits: np.ndarray, labels: np.ndarray, stage: str):
-        if len(np.unique(labels)) != 1:
-
-            self.log(
-                f"{stage}_roc_auc",
-                torch.tensor(roc_auc_score(labels, logits), dtype=torch.float32),
-            )
-            self.log(
-                f"{stage}_ap",
-                torch.tensor(average_precision_score(labels, logits), dtype=torch.float32),
-            )
-
-    def training_epoch_end(self, outputs) -> None:
-        outputs = self.all_gather(outputs)
-        logits = torch.cat([output["logits"] for output in outputs]).cpu().numpy().reshape(-1)
-        labels = torch.cat([output["labels"] for output in outputs]).cpu().numpy()
-
+    def on_train_epoch_end(self):
+        logits = torch.cat([x[0] for x in self.training_step_outputs]).float()
+        labels = torch.cat([x[1] for x in self.training_step_outputs])
         self.log_epoch_metrics(logits, labels, "train")
+        self.training_step_outputs.clear()
 
-    def validation_epoch_end(self, outputs) -> None:
-        outputs = self.all_gather(outputs)
-        logits = torch.cat([output["logits"] for output in outputs]).cpu().numpy().reshape(-1)
-        labels = torch.cat([output["labels"] for output in outputs]).cpu().numpy()
-
+    def on_validation_epoch_end(self):
+        logits = torch.cat([x[0] for x in self.validation_step_outputs]).float()
+        labels = torch.cat([x[1] for x in self.validation_step_outputs])
         self.log_epoch_metrics(logits, labels, "val")
+        self.validation_step_outputs.clear()
 
-    def test_epoch_end(self, outputs) -> None:
-        outputs = self.all_gather(outputs)
-        logits = torch.cat([output["logits"] for output in outputs]).cpu().numpy().reshape(-1)
-        labels = torch.cat([output["labels"] for output in outputs]).cpu().numpy()
-
+    def on_test_epoch_end(self):
+        logits = torch.cat([x[0] for x in self.test_step_outputs]).float()
+        labels = torch.cat([x[1] for x in self.test_step_outputs])
         self.log_epoch_metrics(logits, labels, "test")
+        self.test_step_outputs.clear()
+
+    def log_epoch_metrics(self, logits, labels, stage: str):
+        roc_aucs = self.roc_auc_fn(logits, labels)
+        for i, metric in enumerate(roc_aucs):
+            self.log(
+                f"{stage}_roc_auc_{i}",
+                metric,
+            )
+        self.log(
+            f"{stage}_roc_auc",
+            roc_aucs.mean(),
+        )
+        for i, metric in enumerate(self.ap_fn(logits, labels)):
+            self.log(
+                f"{stage}_ap_{i}",
+                metric,
+            )
 
     def freeze_first_layers(self, num_layers: int = 24):
         for n, p in self.model.named_parameters():
